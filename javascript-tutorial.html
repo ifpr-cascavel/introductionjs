@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>learn.js — Aprenda JavaScript</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1e1f2b;
+    --bg-panel: #262837;
+    --bg-editor: #20222f;
+    --bg-inset: #181923;
+    --border: #34364a;
+    --text: #c7cadb;
+    --text-dim: #7b7f9c;
+    --text-bright: #f2f3f8;
+    --keyword: #e5c07b;
+    --string: #92c9a3;
+    --func: #6fa8e0;
+    --accent: #d47fb0;
+    --line-num: #4b4d63;
+    --radius: 3px;
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  ::selection{ background: var(--func); color: #10111a; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 10px 20px;
+    background: var(--bg-inset);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top:0;
+    z-index: 50;
+  }
+  .dots{ display:flex; gap:7px; margin-right: 8px; }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.red{ background:#e06c75; }
+  .dot.yellow{ background:#e5c07b; }
+  .dot.green{ background:#92c9a3; }
+  .topbar .filename{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .topbar .filename b{ color: var(--text-bright); font-weight:500; }
+  .topbar .badge{
+    margin-left:auto;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--bg-inset);
+    background: var(--string);
+    padding: 3px 8px;
+    border-radius: var(--radius);
+    letter-spacing:.03em;
+  }
+
+  /* ---------- Layout ---------- */
+  .app{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 45px);
+  }
+  @media (max-width: 900px){
+    .app{ grid-template-columns: 1fr; }
+    nav.sidebar{ display:none; }
+  }
+
+  /* ---------- Sidebar / file tree ---------- */
+  nav.sidebar{
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    padding: 22px 0;
+    position: sticky;
+    top: 45px;
+    align-self: start;
+    height: calc(100vh - 45px);
+    overflow-y: auto;
+  }
+  .tree-title{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--text-dim);
+    padding: 0 20px 12px;
+  }
+  .tree a{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    text-decoration:none;
+    color: var(--text-dim);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    padding: 7px 20px 7px 28px;
+    border-left: 2px solid transparent;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .tree a:hover{ color: var(--text-bright); background: rgba(255,255,255,.02); }
+  .tree a.active{ color: var(--func); border-left-color: var(--func); background: rgba(111,168,224,.06); }
+  .tree a .n{ color: var(--line-num); }
+  .tree-group{ margin-bottom: 6px; }
+
+  /* ---------- Main content ---------- */
+  main{ padding: 0; max-width: 880px; }
+  .hero{
+    padding: 70px 44px 50px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .hero .eyebrow::before{ content: "// "; color: var(--line-num); }
+  .hero h1{
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    color: var(--text-bright);
+    margin: 0 0 18px;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 .punct{ color: var(--accent); }
+  .hero p.lead{
+    max-width: 60ch;
+    color: var(--text);
+    font-size: 1.08rem;
+  }
+  .hero .console{
+    margin-top: 30px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    color: var(--string);
+  }
+  .hero .console .prompt{ color: var(--func); }
+  .hero .console .out{ color: var(--text-dim); }
+
+  section.module{
+    padding: 54px 44px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 60px;
+  }
+  section.module:target{ background: rgba(111,168,224,.03); }
+
+  .module-head{
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .module-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--bg);
+    background: var(--keyword);
+    padding: 4px 9px;
+    border-radius: var(--radius);
+    font-weight:700;
+  }
+  h2{
+    font-family:'JetBrains Mono', monospace;
+    color: var(--text-bright);
+    font-size: 1.55rem;
+    margin: 0;
+    font-weight: 700;
+  }
+  h3{
+    font-family:'JetBrains Mono', monospace;
+    color: var(--func);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin: 30px 0 12px;
+  }
+  p{ margin: 0 0 14px; color: var(--text); }
+  ul, ol{ color: var(--text); padding-left: 22px; margin: 0 0 16px; }
+  li{ margin-bottom: 6px; }
+  code.inline{
+    font-family:'JetBrains Mono', monospace;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    color: var(--string);
+    padding: 1px 6px;
+    border-radius: var(--radius);
+    font-size: .88em;
+  }
+
+  /* ---------- Code block ---------- */
+  .code-block{
+    background: var(--bg-editor);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 16px 0 22px;
+  }
+  .code-block .cb-head{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 8px 14px;
+    background: var(--bg-inset);
+    border-bottom: 1px solid var(--border);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    letter-spacing: .03em;
+  }
+  .code-block pre{
+    margin:0;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13.3px;
+    line-height: 1.7;
+    counter-reset: line;
+  }
+  .code-block code{ color: var(--text); }
+  .code-block .ln{
+    display:inline-block;
+    width: 26px;
+    color: var(--line-num);
+    user-select: none;
+    text-align:right;
+    margin-right: 16px;
+  }
+  .tok-kw{ color: var(--keyword); }
+  .tok-str{ color: var(--string); }
+  .tok-fn{ color: var(--func); }
+  .tok-com{ color: var(--text-dim); font-style: italic; }
+  .tok-num{ color: var(--accent); }
+
+  /* ---------- Activity box ---------- */
+  .activity{
+    border: 1px dashed var(--keyword);
+    border-radius: 6px;
+    padding: 20px 22px;
+    background: rgba(229,192,123,.05);
+    margin-top: 22px;
+  }
+  .activity .a-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--keyword);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 12px;
+    font-weight:700;
+  }
+  .activity .a-head::before{ content:"◆"; }
+  .activity ol{ margin-bottom: 0; }
+  .activity li{ color: var(--text); }
+  .activity .hint{
+    margin-top: 12px;
+    font-size: .88rem;
+    color: var(--text-dim);
+  }
+  .activity .hint summary{ cursor:pointer; color: var(--func); font-family:'JetBrains Mono', monospace; font-size:.85rem; }
+
+  /* ---------- Footer ---------- */
+  footer{
+    padding: 40px 44px 70px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  footer .arrow{ color: var(--func); }
+
+  /* ---------- Scrollbar ---------- */
+  ::-webkit-scrollbar{ width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track{ background: var(--bg); }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 6px; }
+
+  a.jump-top{
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--func);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 9px 13px;
+    border-radius: 6px;
+    text-decoration: none;
+    z-index: 40;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+  <div class="filename">learn.js — <b>curso-javascript-basico.md</b></div>
+  <div class="badge">ES2024</div>
+</div>
+
+<div class="app">
+  <nav class="sidebar">
+    <div class="tree-title">Índice do curso</div>
+    <div class="tree">
+      <div class="tree-group">
+        <a href="#intro"><span class="n">00</span> Introdução</a>
+        <a href="#variaveis"><span class="n">01</span> Variáveis e tipos</a>
+        <a href="#operadores"><span class="n">02</span> Operadores</a>
+        <a href="#condicionais"><span class="n">03</span> Condicionais</a>
+        <a href="#loops"><span class="n">04</span> Loops</a>
+        <a href="#funcoes"><span class="n">05</span> Funções</a>
+        <a href="#arrays"><span class="n">06</span> Arrays</a>
+        <a href="#objetos"><span class="n">07</span> Objetos</a>
+        <a href="#dom"><span class="n">08</span> DOM</a>
+        <a href="#eventos"><span class="n">09</span> Eventos</a>
+        <a href="#assincronismo"><span class="n">10</span> Assincronismo</a>
+        <a href="#projeto"><span class="n">11</span> Projeto final</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="hero" id="intro">
+      <div class="eyebrow">arquivo: introducao.js</div>
+      <h1>Aprenda JavaScript<span class="punct">;</span></h1>
+      <p class="lead">Um guia prático, direto ao ponto, com explicações curtas, exemplos de código reais e uma atividade proposta ao final de cada módulo. Abra o console do seu navegador (F12) e vá testando cada exemplo enquanto avança.</p>
+      <div class="console">
+        <div><span class="prompt">&gt;</span> console.log("Olá, mundo!");</div>
+        <div class="out">Olá, mundo!</div>
+      </div>
+
+      <h3>Por que aprender JavaScript?</h3>
+      <p>JavaScript é a linguagem que roda em praticamente todo navegador do planeta. Com ela você pode criar interatividade em páginas web, construir aplicações completas (front-end e back-end, com Node.js), aplicativos mobile e até programas de desktop.</p>
+      <ul>
+        <li>É a única linguagem nativa dos navegadores.</li>
+        <li>Tem uma comunidade enorme e infinidade de bibliotecas.</li>
+        <li>Serve tanto para pequenos scripts quanto para sistemas complexos.</li>
+      </ul>
+      <h3>Como usar este material</h3>
+      <p>Cada módulo tem: uma explicação objetiva, um bloco de código comentado e uma <strong>atividade proposta</strong> para você praticar. Recomendamos copiar os exemplos para um arquivo <code class="inline">.html</code> ou para o console do navegador e experimentar variações.</p>
+    </div>
+
+    <!-- MÓDULO 1 -->
+    <section class="module" id="variaveis">
+      <div class="module-head"><span class="module-num">01</span><h2>Variáveis e tipos de dados</h2></div>
+      <p>Variáveis armazenam valores. Em JavaScript moderno usamos <code class="inline">let</code> para valores que podem mudar e <code class="inline">const</code> para valores fixos. Evite <code class="inline">var</code>, que pertence a uma sintaxe mais antiga e tem comportamento menos previsível.</p>
+
+      <h3>Tipos primitivos</h3>
+      <ul>
+        <li><code class="inline">string</code> — texto, entre aspas.</li>
+        <li><code class="inline">number</code> — números inteiros e decimais.</li>
+        <li><code class="inline">boolean</code> — <code class="inline">true</code> ou <code class="inline">false</code>.</li>
+        <li><code class="inline">undefined</code> — variável declarada sem valor.</li>
+        <li><code class="inline">null</code> — ausência de valor, definida propositalmente.</li>
+      </ul>
+
+      <div class="code-block">
+        <div class="cb-head"><span>variaveis.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-kw">const</span> nome = <span class="tok-str">"Ana"</span>;         <span class="tok-com">// texto — não muda</span>
+<span class="ln">2</span><span class="tok-kw">let</span> idade = <span class="tok-num">28</span>;             <span class="tok-com">// número — pode mudar</span>
+<span class="ln">3</span><span class="tok-kw">let</span> ativo = <span class="tok-kw">true</span>;            <span class="tok-com">// booleano</span>
+<span class="ln">4</span><span class="tok-kw">let</span> cidade;                    <span class="tok-com">// undefined até receber valor</span>
+<span class="ln">5</span>
+<span class="ln">6</span>idade = idade + <span class="tok-num">1</span>;
+<span class="ln">7</span><span class="tok-fn">console</span>.log(<span class="tok-fn">typeof</span> nome, <span class="tok-fn">typeof</span> idade, <span class="tok-fn">typeof</span> ativo);
+<span class="ln">8</span><span class="tok-com">// "string" "number" "boolean"</span></code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Crie três variáveis: <code class="inline">nomeCompleto</code>, <code class="inline">anoNascimento</code> e <code class="inline">estudante</code> (booleana).</li>
+          <li>Calcule a idade aproximada da pessoa a partir do ano atual e imprima uma frase completa com <code class="inline">console.log</code>.</li>
+          <li>Use <code class="inline">typeof</code> para imprimir o tipo de cada variável criada.</li>
+        </ol>
+        <details class="hint">
+          <summary>Ver dica</summary>
+          <p>Use template strings para montar a frase: <code class="inline">`Olá, ${nomeCompleto}!`</code></p>
+        </details>
+      </div>
+    </section>
+
+    <!-- MÓDULO 2 -->
+    <section class="module" id="operadores">
+      <div class="module-head"><span class="module-num">02</span><h2>Operadores</h2></div>
+      <p>Operadores combinam ou comparam valores. Os principais grupos são aritméticos, de comparação, lógicos e de atribuição.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>operadores.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-com">// Aritméticos</span>
+<span class="ln">2</span><span class="tok-fn">console</span>.log(<span class="tok-num">10</span> + <span class="tok-num">5</span>, <span class="tok-num">10</span> % <span class="tok-num">3</span>, <span class="tok-num">2</span> ** <span class="tok-num">10</span>); <span class="tok-com">// 15 1 1024</span>
+<span class="ln">3</span>
+<span class="ln">4</span><span class="tok-com">// Comparação (=== compara valor e tipo)</span>
+<span class="ln">5</span><span class="tok-fn">console</span>.log(<span class="tok-num">5</span> === <span class="tok-str">"5"</span>);   <span class="tok-com">// false</span>
+<span class="ln">6</span><span class="tok-fn">console</span>.log(<span class="tok-num">5</span> == <span class="tok-str">"5"</span>);    <span class="tok-com">// true (evite o ==)</span>
+<span class="ln">7</span>
+<span class="ln">8</span><span class="tok-com">// Lógicos</span>
+<span class="ln">9</span><span class="tok-kw">const</span> maiorDeIdade = <span class="tok-kw">true</span>;
+<span class="ln">10</span><span class="tok-kw">const</span> temCarteira = <span class="tok-kw">false</span>;
+<span class="ln">11</span><span class="tok-fn">console</span>.log(maiorDeIdade && temCarteira); <span class="tok-com">// false</span>
+<span class="ln">12</span><span class="tok-fn">console</span>.log(maiorDeIdade || temCarteira); <span class="tok-com">// true</span></code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Declare duas variáveis numéricas e imprima o resultado das quatro operações básicas entre elas.</li>
+          <li>Escreva uma expressão que verifique se um número é par usando o operador <code class="inline">%</code>.</li>
+          <li>Combine dois booleanos com <code class="inline">&&</code> e <code class="inline">||</code> e explique em um comentário o resultado.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 3 -->
+    <section class="module" id="condicionais">
+      <div class="module-head"><span class="module-num">03</span><h2>Estruturas condicionais</h2></div>
+      <p>Condicionais controlam qual bloco de código será executado, com base em uma condição verdadeira ou falsa.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>condicionais.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-kw">const</span> nota = <span class="tok-num">7.5</span>;
+<span class="ln">2</span>
+<span class="ln">3</span><span class="tok-kw">if</span> (nota >= <span class="tok-num">9</span>) {
+<span class="ln">4</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">"Aprovado com louvor"</span>);
+<span class="ln">5</span>} <span class="tok-kw">else if</span> (nota >= <span class="tok-num">6</span>) {
+<span class="ln">6</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">"Aprovado"</span>);
+<span class="ln">7</span>} <span class="tok-kw">else</span> {
+<span class="ln">8</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">"Reprovado"</span>);
+<span class="ln">9</span>}
+<span class="ln">10</span>
+<span class="ln">11</span><span class="tok-com">// switch — útil para várias comparações do mesmo valor</span>
+<span class="ln">12</span><span class="tok-kw">const</span> dia = <span class="tok-str">"terça"</span>;
+<span class="ln">13</span><span class="tok-kw">switch</span> (dia) {
+<span class="ln">14</span>  <span class="tok-kw">case</span> <span class="tok-str">"sábado"</span>:
+<span class="ln">15</span>  <span class="tok-kw">case</span> <span class="tok-str">"domingo"</span>:
+<span class="ln">16</span>    <span class="tok-fn">console</span>.log(<span class="tok-str">"Fim de semana"</span>);
+<span class="ln">17</span>    <span class="tok-kw">break</span>;
+<span class="ln">18</span>  <span class="tok-kw">default</span>:
+<span class="ln">19</span>    <span class="tok-fn">console</span>.log(<span class="tok-str">"Dia útil"</span>);
+<span class="ln">20</span>}</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Escreva uma função que recebe a idade de uma pessoa e imprime "criança", "adolescente" ou "adulto" usando <code class="inline">if/else</code>.</li>
+          <li>Reescreva a classificação de dias da semana usando <code class="inline">switch</code>, cobrindo todos os sete dias.</li>
+          <li>Desafio: use o operador ternário (<code class="inline">condição ? a : b</code>) para simplificar uma verificação simples de par/ímpar.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 4 -->
+    <section class="module" id="loops">
+      <div class="module-head"><span class="module-num">04</span><h2>Loops (laços de repetição)</h2></div>
+      <p>Loops repetem um bloco de código enquanto uma condição for verdadeira, ou para cada item de uma coleção.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>loops.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-com">// for clássico</span>
+<span class="ln">2</span><span class="tok-kw">for</span> (<span class="tok-kw">let</span> i = <span class="tok-num">1</span>; i <= <span class="tok-num">5</span>; i++) {
+<span class="ln">3</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">`Volta número ${i}`</span>);
+<span class="ln">4</span>}
+<span class="ln">5</span>
+<span class="ln">6</span><span class="tok-com">// while</span>
+<span class="ln">7</span><span class="tok-kw">let</span> tentativas = <span class="tok-num">0</span>;
+<span class="ln">8</span><span class="tok-kw">while</span> (tentativas < <span class="tok-num">3</span>) {
+<span class="ln">9</span>  tentativas++;
+<span class="ln">10</span>}
+<span class="ln">11</span>
+<span class="ln">12</span><span class="tok-com">// for...of — percorre valores de um array</span>
+<span class="ln">13</span><span class="tok-kw">const</span> frutas = [<span class="tok-str">"maçã"</span>, <span class="tok-str">"banana"</span>, <span class="tok-str">"uva"</span>];
+<span class="ln">14</span><span class="tok-kw">for</span> (<span class="tok-kw">const</span> fruta <span class="tok-kw">of</span> frutas) {
+<span class="ln">15</span>  <span class="tok-fn">console</span>.log(fruta);
+<span class="ln">16</span>}</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Use um <code class="inline">for</code> para imprimir a tabuada de um número escolhido por você (de 1 a 10).</li>
+          <li>Use um <code class="inline">while</code> para somar números de 1 até 100 e imprimir o total.</li>
+          <li>Crie um array com 5 nomes e percorra-o com <code class="inline">for...of</code>, imprimindo uma saudação para cada um.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 5 -->
+    <section class="module" id="funcoes">
+      <div class="module-head"><span class="module-num">05</span><h2>Funções</h2></div>
+      <p>Funções agrupam código reutilizável. Você pode declará-las de forma tradicional ou como arrow functions (mais compactas).</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>funcoes.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-com">// Declaração tradicional</span>
+<span class="ln">2</span><span class="tok-kw">function</span> <span class="tok-fn">somar</span>(a, b) {
+<span class="ln">3</span>  <span class="tok-kw">return</span> a + b;
+<span class="ln">4</span>}
+<span class="ln">5</span>
+<span class="ln">6</span><span class="tok-com">// Arrow function equivalente</span>
+<span class="ln">7</span><span class="tok-kw">const</span> <span class="tok-fn">somarArrow</span> = (a, b) => a + b;
+<span class="ln">8</span>
+<span class="ln">9</span><span class="tok-com">// Parâmetro com valor padrão</span>
+<span class="ln">10</span><span class="tok-kw">function</span> <span class="tok-fn">saudacao</span>(nome = <span class="tok-str">"visitante"</span>) {
+<span class="ln">11</span>  <span class="tok-kw">return</span> <span class="tok-str">`Olá, ${nome}!`</span>;
+<span class="ln">12</span>}
+<span class="ln">13</span>
+<span class="ln">14</span><span class="tok-fn">console</span>.log(somar(<span class="tok-num">2</span>, <span class="tok-num">3</span>));      <span class="tok-com">// 5</span>
+<span class="ln">15</span><span class="tok-fn">console</span>.log(saudacao());       <span class="tok-com">// "Olá, visitante!"</span></code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Crie uma função <code class="inline">calcularMedia(notas)</code> que recebe um array de notas e retorna a média.</li>
+          <li>Crie uma arrow function <code class="inline">ehPar(numero)</code> que retorna <code class="inline">true</code> ou <code class="inline">false</code>.</li>
+          <li>Desafio: escreva uma função <code class="inline">converterTemperatura(valor, unidade)</code> que converte entre Celsius e Fahrenheit dependendo da unidade recebida.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 6 -->
+    <section class="module" id="arrays">
+      <div class="module-head"><span class="module-num">06</span><h2>Arrays</h2></div>
+      <p>Arrays armazenam listas ordenadas de valores. JavaScript oferece métodos poderosos para transformar essas listas sem escrever loops manuais.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>arrays.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-kw">const</span> numeros = [<span class="tok-num">1</span>, <span class="tok-num">2</span>, <span class="tok-num">3</span>, <span class="tok-num">4</span>, <span class="tok-num">5</span>];
+<span class="ln">2</span>
+<span class="ln">3</span><span class="tok-com">// map — transforma cada item</span>
+<span class="ln">4</span><span class="tok-kw">const</span> dobrados = numeros.<span class="tok-fn">map</span>(n => n * <span class="tok-num">2</span>);
+<span class="ln">5</span>
+<span class="ln">6</span><span class="tok-com">// filter — mantém só o que passa na condição</span>
+<span class="ln">7</span><span class="tok-kw">const</span> pares = numeros.<span class="tok-fn">filter</span>(n => n % <span class="tok-num">2</span> === <span class="tok-num">0</span>);
+<span class="ln">8</span>
+<span class="ln">9</span><span class="tok-com">// reduce — acumula os itens em um único valor</span>
+<span class="ln">10</span><span class="tok-kw">const</span> soma = numeros.<span class="tok-fn">reduce</span>((total, n) => total + n, <span class="tok-num">0</span>);
+<span class="ln">11</span>
+<span class="ln">12</span><span class="tok-fn">console</span>.log(dobrados); <span class="tok-com">// [2, 4, 6, 8, 10]</span>
+<span class="ln">13</span><span class="tok-fn">console</span>.log(pares);    <span class="tok-com">// [2, 4]</span>
+<span class="ln">14</span><span class="tok-fn">console</span>.log(soma);     <span class="tok-com">// 15</span></code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Dado um array de preços, use <code class="inline">map</code> para aplicar 10% de desconto em todos eles.</li>
+          <li>Dado um array de idades, use <code class="inline">filter</code> para retornar apenas as maiores de idade.</li>
+          <li>Use <code class="inline">reduce</code> para encontrar o maior valor de um array sem usar <code class="inline">Math.max</code>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 7 -->
+    <section class="module" id="objetos">
+      <div class="module-head"><span class="module-num">07</span><h2>Objetos</h2></div>
+      <p>Objetos guardam dados relacionados em pares de chave e valor, e podem incluir também funções (métodos).</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>objetos.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-kw">const</span> produto = {
+<span class="ln">2</span>  nome: <span class="tok-str">"Teclado mecânico"</span>,
+<span class="ln">3</span>  preco: <span class="tok-num">350</span>,
+<span class="ln">4</span>  estoque: <span class="tok-num">12</span>,
+<span class="ln">5</span>  <span class="tok-fn">disponivel</span>() {
+<span class="ln">6</span>    <span class="tok-kw">return</span> <span class="tok-kw">this</span>.estoque > <span class="tok-num">0</span>;
+<span class="ln">7</span>  }
+<span class="ln">8</span>};
+<span class="ln">9</span>
+<span class="ln">10</span><span class="tok-com">// Acesso a propriedades</span>
+<span class="ln">11</span><span class="tok-fn">console</span>.log(produto.nome);        <span class="tok-com">// "Teclado mecânico"</span>
+<span class="ln">12</span><span class="tok-fn">console</span>.log(produto[<span class="tok-str">"preco"</span>]);   <span class="tok-com">// 350</span>
+<span class="ln">13</span><span class="tok-fn">console</span>.log(produto.disponivel()); <span class="tok-com">// true</span>
+<span class="ln">14</span>
+<span class="ln">15</span><span class="tok-com">// Desestruturação</span>
+<span class="ln">16</span><span class="tok-kw">const</span> { nome, preco } = produto;</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Crie um objeto <code class="inline">pessoa</code> com nome, idade e um método <code class="inline">apresentar()</code> que retorna uma frase usando <code class="inline">this</code>.</li>
+          <li>Crie um array de 3 objetos <code class="inline">produto</code> e use <code class="inline">map</code> para extrair só os nomes.</li>
+          <li>Pratique a desestruturação extraindo duas propriedades de um objeto em uma única linha.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 8 -->
+    <section class="module" id="dom">
+      <div class="module-head"><span class="module-num">08</span><h2>Manipulando o DOM</h2></div>
+      <p>O DOM (Document Object Model) é a representação da página HTML em forma de objetos que o JavaScript pode ler e modificar.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>dom.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-com">// Selecionar elementos</span>
+<span class="ln">2</span><span class="tok-kw">const</span> titulo = document.<span class="tok-fn">querySelector</span>(<span class="tok-str">"h1"</span>);
+<span class="ln">3</span><span class="tok-kw">const</span> itens = document.<span class="tok-fn">querySelectorAll</span>(<span class="tok-str">".item"</span>);
+<span class="ln">4</span>
+<span class="ln">5</span><span class="tok-com">// Alterar conteúdo e estilo</span>
+<span class="ln">6</span>titulo.textContent = <span class="tok-str">"Novo título"</span>;
+<span class="ln">7</span>titulo.style.color = <span class="tok-str">"tomato"</span>;
+<span class="ln">8</span>
+<span class="ln">9</span><span class="tok-com">// Criar e inserir elementos</span>
+<span class="ln">10</span><span class="tok-kw">const</span> novoItem = document.<span class="tok-fn">createElement</span>(<span class="tok-str">"li"</span>);
+<span class="ln">11</span>novoItem.textContent = <span class="tok-str">"Item novo"</span>;
+<span class="ln">12</span>document.<span class="tok-fn">querySelector</span>(<span class="tok-str">"ul"</span>).<span class="tok-fn">appendChild</span>(novoItem);</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Em uma página HTML simples, selecione um parágrafo e altere seu texto via <code class="inline">console</code>.</li>
+          <li>Crie dinamicamente 5 itens de lista e insira-os em uma <code class="inline">&lt;ul&gt;</code> existente.</li>
+          <li>Desafio: alterne a classe CSS de um elemento (tema claro/escuro) usando <code class="inline">classList.toggle</code>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 9 -->
+    <section class="module" id="eventos">
+      <div class="module-head"><span class="module-num">09</span><h2>Eventos</h2></div>
+      <p>Eventos permitem que seu código reaja a ações do usuário, como cliques, digitação e envio de formulários.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>eventos.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-kw">const</span> botao = document.<span class="tok-fn">querySelector</span>(<span class="tok-str">"#meu-botao"</span>);
+<span class="ln">2</span>
+<span class="ln">3</span>botao.<span class="tok-fn">addEventListener</span>(<span class="tok-str">"click"</span>, () => {
+<span class="ln">4</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">"Botão clicado!"</span>);
+<span class="ln">5</span>});
+<span class="ln">6</span>
+<span class="ln">7</span><span class="tok-kw">const</span> campo = document.<span class="tok-fn">querySelector</span>(<span class="tok-str">"#nome"</span>);
+<span class="ln">8</span>campo.<span class="tok-fn">addEventListener</span>(<span class="tok-str">"input"</span>, (evento) => {
+<span class="ln">9</span>  <span class="tok-fn">console</span>.log(<span class="tok-str">`Digitando: ${evento.target.value}`</span>);
+<span class="ln">10</span>});</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Crie um botão que, ao ser clicado, incrementa um contador exibido na tela.</li>
+          <li>Crie um campo de texto que exiba, em tempo real, quantos caracteres foram digitados.</li>
+          <li>Desafio: crie um pequeno formulário que valide se o campo não está vazio antes de exibir uma mensagem de sucesso.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- MÓDULO 10 -->
+    <section class="module" id="assincronismo">
+      <div class="module-head"><span class="module-num">10</span><h2>Assincronismo: Promises e async/await</h2></div>
+      <p>Operações como buscar dados de um servidor levam tempo. Promises representam um valor que estará disponível no futuro, e <code class="inline">async/await</code> torna esse código mais fácil de ler.</p>
+
+      <div class="code-block">
+        <div class="cb-head"><span>assincronismo.js</span><span>JavaScript</span></div>
+        <pre><code><span class="ln">1</span><span class="tok-com">// Usando then/catch</span>
+<span class="ln">2</span><span class="tok-fn">fetch</span>(<span class="tok-str">"https://api.exemplo.com/usuarios"</span>)
+<span class="ln">3</span>  .<span class="tok-fn">then</span>(resposta => resposta.json())
+<span class="ln">4</span>  .<span class="tok-fn">then</span>(dados => <span class="tok-fn">console</span>.log(dados))
+<span class="ln">5</span>  .<span class="tok-fn">catch</span>(erro => <span class="tok-fn">console</span>.error(erro));
+<span class="ln">6</span>
+<span class="ln">7</span><span class="tok-com">// Mesma coisa com async/await</span>
+<span class="ln">8</span><span class="tok-kw">async function</span> <span class="tok-fn">buscarUsuarios</span>() {
+<span class="ln">9</span>  <span class="tok-kw">try</span> {
+<span class="ln">10</span>    <span class="tok-kw">const</span> resposta = <span class="tok-kw">await</span> <span class="tok-fn">fetch</span>(<span class="tok-str">"https://api.exemplo.com/usuarios"</span>);
+<span class="ln">11</span>    <span class="tok-kw">const</span> dados = <span class="tok-kw">await</span> resposta.json();
+<span class="ln">12</span>    <span class="tok-fn">console</span>.log(dados);
+<span class="ln">13</span>  } <span class="tok-kw">catch</span> (erro) {
+<span class="ln">14</span>    <span class="tok-fn">console</span>.error(<span class="tok-str">"Falha ao buscar:"</span>, erro);
+<span class="ln">15</span>  }
+<span class="ln">16</span>}</code></pre>
+      </div>
+
+      <div class="activity">
+        <div class="a-head">Atividade proposta</div>
+        <ol>
+          <li>Use a API pública <code class="inline">https://jsonplaceholder.typicode.com/users</code> com <code class="inline">fetch</code> e exiba os nomes no console.</li>
+          <li>Reescreva a mesma busca usando <code class="inline">async/await</code> com tratamento de erro via <code class="inline">try/catch</code>.</li>
+          <li>Desafio: crie uma função que simule uma espera de 2 segundos com <code class="inline">setTimeout</code> envolto em uma Promise, e use <code class="inline">await</code> para esperá-la.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- PROJETO FINAL -->
+    <section class="module" id="projeto">
+      <div class="module-head"><span class="module-num">11</span><h2>Projeto final proposto</h2></div>
+      <p>Para consolidar tudo o que foi visto, construa uma <strong>lista de tarefas (to-do list)</strong> usando apenas HTML, CSS e JavaScript puro (sem frameworks).</p>
+      <h3>Requisitos</h3>
+      <ul>
+        <li>Um campo de texto e um botão para adicionar novas tarefas.</li>
+        <li>Cada tarefa deve poder ser marcada como concluída (clique para riscar o texto).</li>
+        <li>Cada tarefa deve ter um botão de remover.</li>
+        <li>Exiba um contador de "tarefas pendentes" que atualiza automaticamente.</li>
+        <li>Use <code class="inline">addEventListener</code>, manipulação do DOM e ao menos um método de array (<code class="inline">filter</code> ou <code class="inline">map</code>).</li>
+      </ul>
+      <div class="activity">
+        <div class="a-head">Extensões (opcional)</div>
+        <ol>
+          <li>Salve as tarefas no <code class="inline">localStorage</code> para que não se percam ao recarregar a página.</li>
+          <li>Adicione filtros: "todas", "pendentes", "concluídas".</li>
+          <li>Adicione uma animação simples ao adicionar ou remover um item.</li>
+        </ol>
+      </div>
+    </section>
+
+    <footer>
+      <div>fim-do-arquivo.js <span class="arrow">→</span> continue praticando, um exemplo por dia já faz diferença.</div>
+    </footer>
+  </main>
+</div>
+
+<a class="jump-top" href="#intro">↑ topo</a>
+
+</body>
+</html>
