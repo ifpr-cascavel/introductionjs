@@ -1,4 +1,4 @@
-# learn.js — Aprenda JavaScript
+# Aprenda JavaScript
 
 Um site de página única, com visual inspirado em editor de código, para ensinar JavaScript do zero: conceitos explicados de forma direta, exemplos comentados e uma atividade proposta ao final de cada módulo.
 
