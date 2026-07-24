@@ -86,4 +86,4 @@ Distribuído sob a licença MIT. Veja `LICENSE` para mais detalhes.
 ---
 
 Feito para quem está começando em JavaScript e quer aprender praticando. ⌘
-# introductionjs
+# IFPR - Campus Cascavel
